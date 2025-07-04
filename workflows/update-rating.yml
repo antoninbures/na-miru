@@ -1,0 +1,33 @@
+name: Update Google Rating
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # každý den ve 3:00 UTC (tj. 5:00 ráno v Česku)
+  workflow_dispatch: # umožní ruční spuštění
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install node-fetch
+
+      - name: Fetch Google Rating
+        run: node fetch-rating.js
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add data.json
+          git commit -m "Update rating"
+          git push

@@ -1,0 +1,23 @@
+{
+  "name": "na-miru",
+  "version": "1.0.0",
+  "main": "fetch-rating.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/antoninbures/na-miru.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/antoninbures/na-miru/issues"
+  },
+  "homepage": "https://github.com/antoninbures/na-miru#readme",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^17.0.1"
+  }
+}
