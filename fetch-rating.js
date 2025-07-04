@@ -4,14 +4,15 @@ const fs = require("fs");
 const placeId = "ChIJiSPKJ1bxCkcRz6wptMDp4Uo"; // ← nahraď svým skutečným Place ID
 const apiKey = process.env.GOOGLE_API_KEY;
 
-const url = `https://places.googleapis.com/v1/${placeId}?fields=rating,userRatingCount`;
+const url = `https://places.googleapis.com/v1/places/${placeId}?fields=rating,userRatingCount`;
 
 async function fetchRating() {
   try {
     const response = await fetch(url, {
       headers: {
         "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "rating,userRatingCount"
       }
     });
 
@@ -45,3 +46,4 @@ async function fetchRating() {
 }
 
 fetchRating();
+
