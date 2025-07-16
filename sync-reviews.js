@@ -17,45 +17,42 @@ async function fetchGoogleReviews() {
   const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${PLACE_ID}&fields=reviews,url&key=${GOOGLE_API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
-  return {
-    reviews: data.result?.reviews || [],
-    placeUrl: data.result?.url || '',
-  };
-}
 
-async function loadKnownReviewIds() {
-  try {
-    const raw = fs.readFileSync(KNOWN_REVIEWS_PATH, 'utf8');
-    if (!raw.trim()) return new Set(); // prázdný soubor
-    return new Set(JSON.parse(raw));
-  } catch {
-    return new Set();
+  if (!data.result || !data.result.reviews) {
+    console.log("❌ Chyba při načítání recenzí z Google API:", data);
+    return { reviews: [], placeUrl: '' };
   }
-}
 
-async function saveKnownReviewIds(ids) {
-  fs.writeFileSync(KNOWN_REVIEWS_PATH, JSON.stringify([...ids], null, 2), 'utf8');
+  return {
+    reviews: data.result.reviews,
+    placeUrl: data.result.url || '',
+  };
 }
 
 async function uploadToWebflow(review, placeUrl) {
   const slug = slugify(`${review.author_name}-${review.time}`);
+  const payload = {
+    fields: {
+      name: review.author_name,
+      slug: slug,
+      rating: review.rating,
+      text: review.text || '',
+      date: new Date(review.time * 1000).toISOString(),
+      source: 'Google',
+      avatar: review.profile_photo_url,
+      reviewUrl: placeUrl,
+      reviewId: review.time.toString(),
+      _archived: false,
+      _draft: false,
+    },
+  };
+
+  console.log(`📤 Odesílám recenzi: ${review.author_name} (${slug})`);
+  console.log(JSON.stringify(payload, null, 2));
+
   const response = await axios.post(
     `https://api.webflow.com/collections/${WEBFLOW_COLLECTION_ID}/items?live=true`,
-    {
-      fields: {
-        name: review.author_name,
-        slug: slug,
-        rating: review.rating,
-        text: review.text || '',
-        date: new Date(review.time * 1000).toISOString(),
-        source: 'Google',
-        avatar: review.profile_photo_url,
-        reviewUrl: placeUrl,
-        reviewId: review.time.toString(),
-        _archived: false,
-        _draft: false,
-      },
-    },
+    payload,
     {
       headers: {
         Authorization: `Bearer ${WEBFLOW_API_TOKEN}`,
@@ -64,29 +61,36 @@ async function uploadToWebflow(review, placeUrl) {
       },
     }
   );
-  console.log(response.data);
+
+  console.log(`✅ Webflow odpověď:`, response.data);
   return response.data;
 }
 
 (async () => {
   const { reviews, placeUrl } = await fetchGoogleReviews();
-  const knownIds = await loadKnownReviewIds();
 
-  const newReviews = reviews.filter(r => !knownIds.has(r.time.toString()));
-  if (newReviews.length === 0) {
-    console.log('📭 No new reviews to upload.');
+  console.log(`🔎 Staženo ${reviews.length} recenzí z Google`);
+  if (reviews.length === 0) {
+    console.log('📭 Žádné recenze nebyly nalezeny.');
     return;
   }
 
-  for (const review of newReviews) {
-    try {
-      await uploadToWebflow(review, placeUrl);
-      knownIds.add(review.time.toString());
-      console.log(`✅ Uploaded review by ${review.author_name}`);
-    } catch (err) {
-      console.error(`❌ Failed to upload review by ${review.author_name}: ${err.message}`);
-    }
+  console.log('🆕 Přehled recenzí:');
+  reviews.forEach((r) =>
+    console.log(` - ${r.time}: ${r.author_name} (${r.rating}★)`)
+  );
+
+  // 🚨 Debug: nahraj 1. recenzi bez ohledu na duplicit
+  const first = reviews[0];
+  if (!first) {
+    console.log('⚠️ Žádná první recenze – něco je špatně.');
+    return;
   }
 
-  await saveKnownReviewIds(knownIds);
+  try {
+    await uploadToWebflow(first, placeUrl);
+    console.log('✅ Testovací nahrání hotovo.');
+  } catch (err) {
+    console.error('❌ Chyba při nahrávání do Webflow:', err.response?.data || err.message);
+  }
 })();
