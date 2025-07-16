@@ -1,8 +1,8 @@
 require('dotenv').config();
 const fetch = require('node-fetch');
 const fs = require('fs');
-const Webflow = require('webflow-api');
 const path = require('path');
+const createWebflowClient = require('webflow-api');
 
 const PLACE_ID = 'ChIJiSPKJ1bxCkcRz6wptMDp4Uo';
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
@@ -10,7 +10,7 @@ const WEBFLOW_API_TOKEN = process.env.WEBFLOW_API_TOKEN;
 const WEBFLOW_COLLECTION_ID = process.env.WEBFLOW_COLLECTION_ID;
 const KNOWN_REVIEWS_PATH = path.join(__dirname, 'data', 'known-reviews.json');
 
-const webflow = new Webflow({ token: WEBFLOW_API_TOKEN });
+const webflow = createWebflowClient({ token: WEBFLOW_API_TOKEN });
 
 const slugify = (text) =>
   text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').substring(0, 60);
@@ -64,7 +64,7 @@ async function uploadToWebflow(review, placeUrl) {
 
   const newReviews = reviews.filter(r => !knownIds.has(r.time.toString()));
   if (newReviews.length === 0) {
-    console.log('No new reviews to upload.');
+    console.log('📭 No new reviews to upload.');
     return;
   }
 
@@ -74,7 +74,7 @@ async function uploadToWebflow(review, placeUrl) {
       knownIds.add(review.time.toString());
       console.log(`✅ Uploaded review by ${review.author_name}`);
     } catch (err) {
-      console.error(`❌ Failed to upload review: ${err.message}`);
+      console.error(`❌ Failed to upload review by ${review.author_name}: ${err.message}`);
     }
   }
 
