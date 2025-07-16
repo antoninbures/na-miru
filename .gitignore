@@ -1,8 +1,7 @@
 get_reviews.py
 import_json.py
-package-lock.json
-pqckage.json
 reviews.csv
 reviews.json
+package-lock.json
 /node_modules
 webflow-api
