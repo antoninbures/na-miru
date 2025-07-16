@@ -2,15 +2,13 @@ require('dotenv').config();
 const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
-const createWebflowClient = require('webflow-api');
+const axios = require('axios');
 
 const PLACE_ID = 'ChIJiSPKJ1bxCkcRz6wptMDp4Uo';
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const WEBFLOW_API_TOKEN = process.env.WEBFLOW_API_TOKEN;
 const WEBFLOW_COLLECTION_ID = process.env.WEBFLOW_COLLECTION_ID;
 const KNOWN_REVIEWS_PATH = path.join(__dirname, 'data', 'known-reviews.json');
-
-const webflow = createWebflowClient({ token: WEBFLOW_API_TOKEN });
 
 const slugify = (text) =>
   text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').substring(0, 60);
@@ -40,22 +38,33 @@ async function saveKnownReviewIds(ids) {
 
 async function uploadToWebflow(review, placeUrl) {
   const slug = slugify(`${review.author_name}-${review.time}`);
-  return webflow.createItem({
-    collectionId: WEBFLOW_COLLECTION_ID,
-    fields: {
-      name: review.author_name,
-      slug,
-      rating: review.rating,
-      text: review.text || '',
-      date: new Date(review.time * 1000).toISOString(),
-      source: 'Google',
-      avatar: review.profile_photo_url,
-      reviewUrl: placeUrl,
-      reviewId: review.time.toString(),
-      _archived: false,
-      _draft: false,
+  const response = await axios.post(
+    `https://api.webflow.com/collections/${WEBFLOW_COLLECTION_ID}/items?live=true`,
+    {
+      fields: {
+        name: review.author_name,
+        slug: slug,
+        rating: review.rating,
+        text: review.text || '',
+        date: new Date(review.time * 1000).toISOString(),
+        source: 'Google',
+        avatar: review.profile_photo_url,
+        reviewUrl: placeUrl,
+        reviewId: review.time.toString(),
+        _archived: false,
+        _draft: false,
+      },
     },
-  });
+    {
+      headers: {
+        Authorization: `Bearer ${WEBFLOW_API_TOKEN}`,
+        'Content-Type': 'application/json',
+        'accept-version': '1.0.0',
+      },
+    }
+  );
+
+  return response.data;
 }
 
 (async () => {
