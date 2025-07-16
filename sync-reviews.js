@@ -26,6 +26,7 @@ async function fetchGoogleReviews() {
 async function loadKnownReviewIds() {
   try {
     const raw = fs.readFileSync(KNOWN_REVIEWS_PATH, 'utf8');
+    if (!raw.trim()) return new Set(); // prázdný soubor
     return new Set(JSON.parse(raw));
   } catch {
     return new Set();
