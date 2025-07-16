@@ -1,7 +1,7 @@
 require('dotenv').config();
 const fetch = require('node-fetch');
 const fs = require('fs');
-const { Webflow } = require('webflow-api');
+const Webflow = require('webflow-api');
 const path = require('path');
 
 const PLACE_ID = 'ChIJiSPKJ1bxCkcRz6wptMDp4Uo';
