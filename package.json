@@ -18,6 +18,8 @@
   "homepage": "https://github.com/antoninbures/na-miru#readme",
   "description": "",
   "dependencies": {
-    "dotenv": "^17.0.1"
+    "dotenv": "^17.0.1",
+    "node-fetch": "^2.6.7",
+    "webflow-api": "^3.3.0"
   }
 }

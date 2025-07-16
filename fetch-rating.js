@@ -1,7 +1,7 @@
 require("dotenv").config();
 const fs = require("fs");
 
-const placeId = "ChIJiSPKJ1bxCkcRz6wptMDp4Uo"; // ← nahraď svým skutečným Place ID
+const placeId = "ChIJiSPKJ1bxCkcRz6wptMDp4Uo"; 
 const apiKey = process.env.GOOGLE_API_KEY;
 
 const url = `https://places.googleapis.com/v1/places/${placeId}?fields=rating,userRatingCount`;
