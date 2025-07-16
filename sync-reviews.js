@@ -63,7 +63,7 @@ async function uploadToWebflow(review, placeUrl) {
       },
     }
   );
-
+  console.log(response.data);
   return response.data;
 }
 
