@@ -55,15 +55,18 @@ const REVIEW_CACHE_PATH = './data/reviewCache.json';
       const payload = {
         fields: {
             name: review.author_name,
-            slug: slug, // ✅ Slug je teď přidán správně
+            slug: slug,
             rating: review.rating,
+            text: `<p>${review.text}</p>`, // Google Places nemá HTML, tak obalíme odstavcem
+            avatar: review.profile_photo_url || '', // fallback pokud chybí
+            reviewUrl: placeUrl, // link na Google Maps místo
             date: new Date(review.time * 1000).toISOString(),
             source: 'Google',
             reviewId: review.time.toString(),
             _archived: false,
             _draft: false,
         },
-        };
+    };
 
       console.log(`📤 Odesílám recenzi: ${review.author_name} (${slug})`);
       console.log(JSON.stringify(payload, null, 2));
