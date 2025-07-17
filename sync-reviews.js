@@ -1,93 +1,94 @@
-
-require('dotenv').config();
-const fetch = require('node-fetch');
-const fs = require('fs');
-const path = require('path');
 const axios = require('axios');
+const slugify = require('slugify');
+const fs = require('fs');
+require('dotenv').config();
 
-const PLACE_ID = 'ChIJiSPKJ1bxCkcRz6wptMDp4Uo';
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const WEBFLOW_API_TOKEN = process.env.WEBFLOW_API_TOKEN;
 const WEBFLOW_COLLECTION_ID = process.env.WEBFLOW_COLLECTION_ID;
-const KNOWN_REVIEWS_PATH = path.join(__dirname, 'data', 'known-reviews.json');
-
-const slugify = (text) =>
-  text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').substring(0, 60);
-
-async function fetchGoogleReviews() {
-  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${PLACE_ID}&fields=reviews,url&language=cs&key=${GOOGLE_API_KEY}`;
-  const res = await fetch(url);
-  const data = await res.json();
-
-  if (!data.result || !data.result.reviews) {
-    console.log("❌ Chyba při načítání recenzí z Google API:", data);
-    return { reviews: [], placeUrl: '' };
-  }
-
-  return {
-    reviews: data.result.reviews,
-    placeUrl: data.result.url || '',
-  };
-}
-
-async function uploadToWebflow(review, placeUrl) {
-  const slug = slugify(`${review.author_name}-${review.time}`);
-  const payload = {
-  fields: {
-    name: review.author_name,
-    rating: review.rating,
-    date: new Date(review.time * 1000).toISOString(),
-    source: 'Google',
-    reviewId: review.time.toString(),
-    _archived: false,
-    _draft: false,
-  },
-};
-};
-
-  console.log(`📤 Odesílám recenzi: ${review.author_name} (${slug})`);
-  console.log(JSON.stringify(payload, null, 2));
-
-  const response = await axios.post(
-    `https://api.webflow.com/collections/${WEBFLOW_COLLECTION_ID}/items?live=true`,
-    payload,
-    {
-      headers: {
-        Authorization: `Bearer ${WEBFLOW_API_TOKEN}`,
-        'Content-Type': 'application/json',
-        'accept-version': '1.0.0',
-      },
-    }
-  );
-
-  console.log(`✅ Webflow odpověď:`, response.data);
-  return response.data;
-}
+const PLACE_ID = 'ChIJiSPKJ1bxCkcRz6wptMDp4Uo';
+const REVIEW_CACHE_PATH = './data/reviewCache.json';
 
 (async () => {
-  const { reviews, placeUrl } = await fetchGoogleReviews();
-
-  console.log(`🔎 Staženo ${reviews.length} recenzí z Google`);
-  if (reviews.length === 0) {
-    console.log('📭 Žádné recenze nebyly nalezeny.');
-    return;
-  }
-
-  console.log('🆕 Přehled recenzí:');
-  reviews.forEach((r) =>
-    console.log(` - ${r.time}: ${r.author_name} (${r.rating}★)`)
-  );
-
-  const first = reviews[0];
-  if (!first) {
-    console.log('⚠️ Žádná první recenze – něco je špatně.');
-    return;
-  }
-
   try {
-    await uploadToWebflow(first, placeUrl);
-    console.log('✅ Testovací nahrání hotovo.');
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${PLACE_ID}&fields=reviews,url&language=cs&key=${GOOGLE_API_KEY}`;
+    const res = await axios.get(url);
+
+    if (res.data.status !== 'OK' || !res.data.result.reviews) {
+      console.error('❌ Chyba při načítání recenzí z Google API:', res.data);
+      return;
+    }
+
+    const reviews = res.data.result.reviews;
+    const placeUrl = res.data.result.url;
+    console.log(`🔎 Staženo ${reviews.length} recenzí z Google`);
+
+    // Načtení cache
+    let cache = [];
+    if (fs.existsSync(REVIEW_CACHE_PATH)) {
+      try {
+        cache = JSON.parse(fs.readFileSync(REVIEW_CACHE_PATH, 'utf-8'));
+      } catch {
+        console.warn('⚠️ Nepodařilo se načíst cache, pokračuji bez ní');
+      }
+    }
+
+    const cachedIds = new Set(cache.map((r) => r.reviewId));
+    const newReviews = reviews.filter((r) => !cachedIds.has(r.time.toString()));
+
+    if (newReviews.length === 0) {
+      console.log('📭 Žádné nové recenze k odeslání.');
+      return;
+    }
+
+    console.log(`🆕 Přehled recenzí:`);
+    newReviews.forEach((r) =>
+      console.log(` - ${r.time}: ${r.author_name} (${r.rating}★)`)
+    );
+
+    for (const review of newReviews) {
+      const slug = slugify(`${review.author_name}-${review.time}`, {
+        lower: true,
+        strict: true,
+      });
+
+      const payload = {
+        fields: {
+          name: review.author_name,
+          rating: review.rating,
+          date: new Date(review.time * 1000).toISOString(),
+          source: 'Google',
+          reviewId: review.time.toString(),
+          _archived: false,
+          _draft: false,
+        },
+      };
+
+      console.log(`📤 Odesílám recenzi: ${review.author_name} (${slug})`);
+      console.log(JSON.stringify(payload, null, 2));
+
+      try {
+        const response = await axios.post(
+          `https://api.webflow.com/collections/${WEBFLOW_COLLECTION_ID}/items?live=true`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${WEBFLOW_API_TOKEN}`,
+              'Content-Type': 'application/json',
+              'accept-version': '1.0.0',
+            },
+          }
+        );
+        console.log(`✅ Webflow odpověď:`, response.data);
+        cache.push({ reviewId: review.time.toString() });
+      } catch (err) {
+        console.error(`❌ Chyba při nahrávání do Webflow:`, err.response?.data || err.message);
+      }
+    }
+
+    fs.writeFileSync(REVIEW_CACHE_PATH, JSON.stringify(cache, null, 2));
+    console.log('💾 Cache aktualizována.');
   } catch (err) {
-    console.error('❌ Chyba při nahrávání do Webflow:', err.response?.data || err.message);
+    console.error('❌ Neočekávaná chyba:', err);
   }
 })();
