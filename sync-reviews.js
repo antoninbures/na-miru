@@ -1,13 +1,24 @@
-// sync-reviews.js
-// ----------------
+/**
+ * sync-reviews.js  –  Google Reviews ➜ Webflow CMS (v2 API)
+ * --------------------------------------------------------
+ * ➊ načte schéma kolekce a vytvoří mapu slug → fieldId
+ * ➋ stáhne recenze z Google Places (cs)
+ * ➌ odešle jen nové recenze do Webflow (fieldData formát)
+ * --------------------------------------------------------
+ * ENV vars (GitHub Actions secrets):
+ *   GOOGLE_API_KEY
+ *   WEBFLOW_API_TOKEN
+ *   WEBFLOW_COLLECTION_ID
+ */
+
 const axios   = require('axios');
 const slugify = require('slugify');
 const fs      = require('fs');
 require('dotenv').config();
 
-// ----- konfigurace -------------------------------------------------
-const PLACE_ID            = 'ChIJiSPKJ1bxCkcRz6wptMDp4Uo';      // Google Place ID
-const REVIEW_CACHE_PATH   = './data/reviewCache.json';           // uložení ID již nahraných recenzí
+// ---------- konfigurace -------------------------------------------
+const PLACE_ID          = 'ChIJiSPKJ1bxCkcRz6wptMDp4Uo';
+const REVIEW_CACHE_PATH = './data/reviewCache.json';
 
 const {
   GOOGLE_API_KEY,
@@ -16,113 +27,97 @@ const {
 } = process.env;
 
 if (!GOOGLE_API_KEY || !WEBFLOW_API_TOKEN || !WEBFLOW_COLLECTION_ID) {
-  console.error('❌ Chybí environment proměnné!');
+  console.error('❌ Chybí environment proměnné');
   process.exit(1);
 }
-// -------------------------------------------------------------------
+// ------------------------------------------------------------------
 
-/* ------------------------------------------------------------------ *
- * 1) Načti schéma kolekce a vytvoř mapu slug → id                    *
- * ------------------------------------------------------------------ */
-async function getFieldIdMap() {
+/** -----------------------------------------------------------------
+ * 1) vrátí mapu { slug : fieldId }
+ * ----------------------------------------------------------------*/
+async function getFieldMap() {
   const res = await axios.get(
     `https://api.webflow.com/v2/collections/${WEBFLOW_COLLECTION_ID}`,
-    {
-      headers: {
-        Authorization: `Bearer ${WEBFLOW_API_TOKEN}`,
-        'accept-version': '2.0.0',
-      },
-    }
+    { headers: { Authorization: `Bearer ${WEBFLOW_API_TOKEN}` } }
   );
   return Object.fromEntries(res.data.fields.map(f => [f.slug, f._id]));
 }
 
-/* ------------------------------------------------------------------ *
- * 2) Stáhni recenze z Google                                         *
- * ------------------------------------------------------------------ */
+/** -----------------------------------------------------------------
+ * 2) stáhne recenze z Google
+ * ----------------------------------------------------------------*/
 async function fetchReviews() {
   const url =
-    `https://maps.googleapis.com/maps/api/place/details/json` +
+    'https://maps.googleapis.com/maps/api/place/details/json' +
     `?place_id=${PLACE_ID}` +
-    `&fields=reviews,url` +
-    `&language=cs` +
+    '&fields=reviews,url' +
+    '&language=cs' +
     `&key=${GOOGLE_API_KEY}`;
 
   const res = await axios.get(url);
-  if (res.data.status !== 'OK' || !res.data.result.reviews) {
+  if (res.data.status !== 'OK' || !res.data.result.reviews)
     throw new Error(`Google API error: ${JSON.stringify(res.data)}`);
-  }
-  return {
-    reviews: res.data.result.reviews,
-    placeUrl: res.data.result.url,
-  };
+
+  return { reviews: res.data.result.reviews, placeUrl: res.data.result.url };
 }
 
-/* ------------------------------------------------------------------ *
- * 3) Připrav payload podle ID mapy                                   *
- * ------------------------------------------------------------------ */
-function buildPayload(review, placeUrl, field) {
-  const slug = slugify(`${review.author_name}-${review.time}`, {
-    lower: true,
-    strict: true,
-  });
+/** -----------------------------------------------------------------
+ * 3) vytvoří payload pro Webflow v2 (fieldData)
+ * ----------------------------------------------------------------*/
+function toPayload(r, placeUrl, F) {
+  const slug = slugify(`${r.author_name}-${r.time}`, { lower: true, strict: true });
 
   return {
-    name: review.author_name,  // systémové pole položky
-    slug: slug,                // systémové slug položky
-    fields: {
-      [field.rating]   : review.rating,
-      [field.text]     : `<p>${review.text}</p>`,
-      [field.date]     : new Date(review.time * 1000).toISOString(),
-      [field.source]   : 'Google',
-      [field.avatar]   : review.profile_photo_url || '',
-      [field.reviewUrl]: placeUrl,
-      [field.reviewId] : review.time.toString(),
-      _archived : false,
-      _draft    : false,
+    isArchived: false,
+    isDraft:    false,
+    fieldData: {
+      name : r.author_name,
+      slug : slug,
+
+      [F.rating]   : r.rating,
+      [F.text]     : `<p>${r.text}</p>`,
+      [F.date]     : new Date(r.time * 1000).toISOString(),
+      [F.source]   : 'Google',
+      [F.avatar]   : r.profile_photo_url || '',
+      [F.reviewUrl]: placeUrl,
+      [F.reviewId] : r.time.toString(),
     },
   };
 }
 
-/* ------------------------------------------------------------------ *
- * 4) Hlavní flow                                                     *
- * ------------------------------------------------------------------ */
+/* =================================================================
+ *  MAIN
+ * =================================================================*/
 (async () => {
   try {
-    // a) mapa slug → id
-    const FIELD = await getFieldIdMap();
+    /* a) schéma kolekce ------------------------------------------------*/
+    const F = await getFieldMap();
 
-    // b) recenze z Google
+    /* b) recenze z Google --------------------------------------------*/
     const { reviews, placeUrl } = await fetchReviews();
-    console.log(`🔎 Staženo ${reviews.length} recenzí z Google`);
+    console.log(`🔎 Staženo ${reviews.length} recenzí z Google`);
 
-    // c) načti / připrav cache
+    /* c) cache --------------------------------------------------------*/
     let cache = [];
     if (fs.existsSync(REVIEW_CACHE_PATH)) {
-      try {
-        cache = JSON.parse(fs.readFileSync(REVIEW_CACHE_PATH, 'utf-8'));
-      } catch {
-        console.warn('⚠️  Cache se nepodařilo načíst, pokračuji bez ní');
-      }
+      try   { cache = JSON.parse(fs.readFileSync(REVIEW_CACHE_PATH, 'utf-8')); }
+      catch { console.warn('⚠️ Cache nečitelná, pokračuji bez ní'); }
     }
     const cachedIds = new Set(cache.map(r => r.reviewId));
 
-    // d) odfiltruj nové
     const newReviews = reviews.filter(r => !cachedIds.has(r.time.toString()));
-    if (newReviews.length === 0) {
-      console.log('📭 Žádné nové recenze k odeslání.');
+    if (!newReviews.length) {
+      console.log('📭 Žádné nové recenze.');
       return;
     }
 
     console.log('🆕 Přehled nových recenzí:');
-    newReviews.forEach(r =>
-      console.log(` • ${r.author_name} (${r.rating}★) – ${r.time}`)
-    );
+    newReviews.forEach(r => console.log(` • ${r.author_name} (${r.rating}★) – ${r.time}`));
 
-    // e) odesílání do Webflow
-    for (const review of newReviews) {
-      const payload = buildPayload(review, placeUrl, FIELD);
-      console.log(`📤 Nahrávám: ${payload.name}`);
+    /* d) odesílání ----------------------------------------------------*/
+    for (const r of newReviews) {
+      const payload = toPayload(r, placeUrl, F);
+      console.log(`📤 Nahrávám: ${r.author_name}`);
 
       try {
         const res = await axios.post(
@@ -130,27 +125,24 @@ function buildPayload(review, placeUrl, field) {
           payload,
           {
             headers: {
-              Authorization   : `Bearer ${WEBFLOW_API_TOKEN}`,
-              'Content-Type'  : 'application/json',
-              'accept-version': '2.0.0',
+              Authorization: `Bearer ${WEBFLOW_API_TOKEN}`,
+              'Content-Type': 'application/json',
             },
           }
         );
-        console.log(`   ✅ OK – itemId ${res.data._id}`);
-        cache.push({ reviewId: review.time.toString() });
+        console.log(`   ✅ itemId ${res.data.itemId}`);
+        cache.push({ reviewId: r.time.toString() });
       } catch (err) {
-        console.error('❌ Webflow error:', {
-            status: err.response?.status,
-            data:   err.response?.data,
-        });
+        console.error('   ❌ Webflow error:', err.response?.data || err.message);
       }
     }
 
-    // f) aktualizuj cache
+    /* e) update cache -------------------------------------------------*/
+    fs.mkdirSync('data', { recursive: true });
     fs.writeFileSync(REVIEW_CACHE_PATH, JSON.stringify(cache, null, 2));
     console.log('💾 Cache aktualizována.');
   } catch (err) {
-    console.error('❌ Neočekávaná chyba:', err.message);
+    console.error(`❌ Neočekávaná chyba: ${err.message}`);
     process.exit(1);
   }
 })();
