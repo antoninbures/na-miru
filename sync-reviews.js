@@ -54,15 +54,16 @@ const REVIEW_CACHE_PATH = './data/reviewCache.json';
 
       const payload = {
         fields: {
-          name: review.author_name,
-          rating: review.rating,
-          date: new Date(review.time * 1000).toISOString(),
-          source: 'Google',
-          reviewId: review.time.toString(),
-          _archived: false,
-          _draft: false,
+            name: review.author_name,
+            slug: slug, // ✅ Slug je teď přidán správně
+            rating: review.rating,
+            date: new Date(review.time * 1000).toISOString(),
+            source: 'Google',
+            reviewId: review.time.toString(),
+            _archived: false,
+            _draft: false,
         },
-      };
+        };
 
       console.log(`📤 Odesílám recenzi: ${review.author_name} (${slug})`);
       console.log(JSON.stringify(payload, null, 2));
