@@ -33,20 +33,19 @@ async function fetchGoogleReviews() {
 async function uploadToWebflow(review, placeUrl) {
   const slug = slugify(`${review.author_name}-${review.time}`);
   const payload = {
-    fields: {
-      name: review.author_name,
-      slug: slug,
-      rating: review.rating,
-      text: review.text || '',
-      date: new Date(review.time * 1000).toISOString(),
-      source: 'Google',
-      avatar: review.profile_photo_url,
-      reviewUrl: placeUrl,
-      reviewId: review.time.toString(),
-      _archived: false,
-      _draft: false,
-    },
-  };
+  fields: {
+    name: review.author_name,
+    slug: slug,
+    rating: review.rating,
+    text: `<p>${review.text || ''}</p>`,
+    date: new Date(review.time * 1000).toISOString(),
+    source: 'Google',
+    reviewUrl: placeUrl,
+    reviewId: review.time.toString(),
+    _archived: false,
+    _draft: false,
+  },
+};
 
   console.log(`📤 Odesílám recenzi: ${review.author_name} (${slug})`);
   console.log(JSON.stringify(payload, null, 2));
