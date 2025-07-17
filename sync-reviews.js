@@ -53,20 +53,24 @@ const REVIEW_CACHE_PATH = './data/reviewCache.json';
       });
 
       const payload = {
+        name: review.author_name,
+        slug: slug,
         fields: {
-            name: review.author_name,
-            slug: slug,
-            rating: review.rating,
-            text: `<p>${review.text}</p>`, // Google Places nemá HTML, tak obalíme odstavcem
-            avatar: review.profile_photo_url || '', // fallback pokud chybí
-            reviewUrl: placeUrl, // link na Google Maps místo
-            date: new Date(review.time * 1000).toISOString(),
-            source: 'Google',
-            reviewId: review.time.toString(),
-            _archived: false,
-            _draft: false,
+          name: review.author_name,
+          slug: slug,
+          rating: review.rating,
+          text: {
+            html: `<p>${review.text}</p>`,
+          },
+          avatar: review.profile_photo_url || '',
+          reviewUrl: placeUrl,
+          date: new Date(review.time * 1000).toISOString(),
+          source: 'Google',
+          reviewId: review.time.toString(),
+          _archived: false,
+          _draft: false,
         },
-    };
+      };
 
       console.log(`📤 Odesílám recenzi: ${review.author_name} (${slug})`);
       console.log(JSON.stringify(payload, null, 2));
@@ -86,7 +90,12 @@ const REVIEW_CACHE_PATH = './data/reviewCache.json';
         console.log(`✅ Webflow odpověď:`, response.data);
         cache.push({ reviewId: review.time.toString() });
       } catch (err) {
-        console.error(`❌ Chyba při nahrávání do Webflow:`, err.response?.data || err.message);
+        console.error('❌ Chyba při nahrávání do Webflow:', {
+          msg: err.response?.data?.msg || err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+          sentPayload: payload,
+        });
       }
     }
 
