@@ -26,7 +26,7 @@ if (!GOOGLE_API_KEY || !WEBFLOW_API_TOKEN || !WEBFLOW_COLLECTION_ID) {
  * ------------------------------------------------------------------ */
 async function getFieldIdMap() {
   const res = await axios.get(
-    `https://api.webflow.com/collections/${WEBFLOW_COLLECTION_ID}`,
+    `https://api.webflow.com/v2/collections/${WEBFLOW_COLLECTION_ID}`,
     {
       headers: {
         Authorization: `Bearer ${WEBFLOW_API_TOKEN}`,
@@ -126,7 +126,7 @@ function buildPayload(review, placeUrl, field) {
 
       try {
         const res = await axios.post(
-          `https://api.webflow.com/collections/${WEBFLOW_COLLECTION_ID}/items?live=true`,
+          `https://api.webflow.com/v2/collections/${WEBFLOW_COLLECTION_ID}/items?live=true`,
           payload,
           {
             headers: {
@@ -139,7 +139,10 @@ function buildPayload(review, placeUrl, field) {
         console.log(`   ✅ OK – itemId ${res.data._id}`);
         cache.push({ reviewId: review.time.toString() });
       } catch (err) {
-        console.error('   ❌ Webflow error:', err.response?.data || err.message);
+        console.error('❌ Webflow error:', {
+            status: err.response?.status,
+            data:   err.response?.data,
+        });
       }
     }
 
