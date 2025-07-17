@@ -59,9 +59,7 @@ const REVIEW_CACHE_PATH = './data/reviewCache.json';
           name: review.author_name,
           slug: slug,
           rating: review.rating,
-          text: {
-            html: `<p>${review.text}</p>`,
-          },
+          text: `<p>${review.text}</p>`,
           avatar: review.profile_photo_url || '',
           reviewUrl: placeUrl,
           date: new Date(review.time * 1000).toISOString(),
