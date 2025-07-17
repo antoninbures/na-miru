@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 const fetch = require('node-fetch');
 const fs = require('fs');
@@ -80,7 +81,6 @@ async function uploadToWebflow(review, placeUrl) {
     console.log(` - ${r.time}: ${r.author_name} (${r.rating}★)`)
   );
 
-  // 🚨 Debug: nahraj 1. recenzi bez ohledu na duplicit
   const first = reviews[0];
   if (!first) {
     console.log('⚠️ Žádná první recenze – něco je špatně.');
