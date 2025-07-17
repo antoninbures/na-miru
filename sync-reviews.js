@@ -91,15 +91,15 @@ function buildItemPayload(review, placeUrl) {
     isArchived: false,
     isDraft: false,
     fieldData: {
-      name: review.author_name.substring(0, 100), // Omezení délky
-      slug: toSlug(review.author_name, review.time),
+      name: review.author_name.substring(0, 256), // Max 256 znaků podle schématu
+      slug: toSlug(review.author_name, review.time).substring(0, 256), // Max 256 znaků
       rating: Math.min(Math.max(review.rating, 1), 5), // Zajištění rozpětí 1-5
       text: reviewText ? `<p>${reviewText}</p>` : '<p>Bez komentáře</p>',
       date: new Date(review.time * 1000).toISOString(),
       source: 'Google',
       avatar: review.profile_photo_url || '',
-      reviewUrl: placeUrl,
-      reviewId: review.time.toString(),
+      reviewurl: placeUrl, // Správný název pole (malé písmeno)
+      reviewid: review.time.toString(), // Správný název pole (malé písmeno)
     }
   };
 }
@@ -202,6 +202,8 @@ async function main() {
       cache.reviewIds.push(...uploadedIds);
       saveCache(cache);
       console.log(`✅ Úspěšně nahráno ${uploadedIds.length} nových recenzí`);
+    } else {
+      console.log('❌ Žádné recenze nebyly úspěšně nahrány');
     }
     
     console.log('\n🎉 Synchronizace dokončena!');

@@ -5,3 +5,5 @@ reviews.json
 package-lock.json
 /node_modules
 webflow-api
+.env
+test-webflow-schema.js
