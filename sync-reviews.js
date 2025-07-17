@@ -30,7 +30,7 @@ async function getFieldIdMap() {
     {
       headers: {
         Authorization: `Bearer ${WEBFLOW_API_TOKEN}`,
-        'accept-version': '1.0.0',
+        'accept-version': '2.0.0',
       },
     }
   );
@@ -132,7 +132,7 @@ function buildPayload(review, placeUrl, field) {
             headers: {
               Authorization   : `Bearer ${WEBFLOW_API_TOKEN}`,
               'Content-Type'  : 'application/json',
-              'accept-version': '1.0.0',
+              'accept-version': '2.0.0',
             },
           }
         );
