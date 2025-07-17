@@ -15,7 +15,7 @@ const slugify = (text) =>
   text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').substring(0, 60);
 
 async function fetchGoogleReviews() {
-  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${PLACE_ID}&fields=reviews,url&key=${GOOGLE_API_KEY}`;
+  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${PLACE_ID}&fields=reviews,url&language=cs&key=${GOOGLE_API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
 
@@ -35,16 +35,14 @@ async function uploadToWebflow(review, placeUrl) {
   const payload = {
   fields: {
     name: review.author_name,
-    slug: slug,
     rating: review.rating,
-    text: `<p>${review.text || ''}</p>`,
     date: new Date(review.time * 1000).toISOString(),
     source: 'Google',
-    reviewUrl: placeUrl,
     reviewId: review.time.toString(),
     _archived: false,
     _draft: false,
   },
+};
 };
 
   console.log(`📤 Odesílám recenzi: ${review.author_name} (${slug})`);
