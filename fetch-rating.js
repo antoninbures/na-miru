@@ -1,5 +1,7 @@
-require("dotenv").config();
-const fs = require("fs");
+import { config } from "dotenv";
+import { writeFileSync } from "fs";
+
+config();
 
 const placeId = "ChIJiSPKJ1bxCkcRz6wptMDp4Uo"; 
 const apiKey = process.env.GOOGLE_API_KEY;
@@ -32,7 +34,7 @@ async function fetchRating() {
         updated: new Date().toISOString()
       };
 
-      fs.writeFileSync("data.json", JSON.stringify(result, null, 2));
+      writeFileSync("data.json", JSON.stringify(result, null, 2));
       console.log("✅ Hodnocení uloženo do data.json");
     } catch (jsonErr) {
       console.error("❌ Odpověď není validní JSON:");
@@ -46,4 +48,3 @@ async function fetchRating() {
 }
 
 fetchRating();
-
