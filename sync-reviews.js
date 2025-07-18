@@ -15,8 +15,9 @@ const CACHE_FILE = './review-cache.json';
 
 // Validace environment variables
 function validateEnvVars() {
-  const required = ['GOOGLE_API_KEY', 'WEBFLOW_API_TOKEN', 'WEBFLOW_COLLECTION_ID'];
+  const required = ['GOOGLE_API_KEY_REVIEWS', 'WEBFLOW_API_TOKEN', 'WEBFLOW_COLLECTION_ID'];
   const missing = required.filter(key => !process.env[key]);
+
   
   if (missing.length > 0) {
     console.error(`❌ Chybějící environment variables: ${missing.join(', ')}`);
