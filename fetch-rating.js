@@ -24,6 +24,11 @@ async function fetchRating() {
       const data = JSON.parse(text);
       console.log("📦 Odpověď z API:", JSON.stringify(data, null, 2));
 
+      // Zkontrolovat chyby API
+      if (data.error) {
+        throw new Error(`❌ Google API chyba: ${data.error.message} (${data.error.code})`);
+      }
+
       if (!data.rating || !data.userRatingCount) {
         throw new Error("❌ API nevrátilo hodnocení nebo počet recenzí.");
       }
