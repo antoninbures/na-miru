@@ -14,7 +14,8 @@ async function fetchRating() {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "rating,userRatingCount"
+        "X-Goog-FieldMask": "rating,userRatingCount",
+        "Referer": "https://github.com"
       }
     });
 
