@@ -95,7 +95,7 @@ function buildItemPayload(review, placeUrl) {
       name: review.author_name.substring(0, 256), // Max 256 znaků podle schématu
       slug: toSlug(review.author_name, review.time).substring(0, 256), // Max 256 znaků
       rating: Math.min(Math.max(review.rating, 1), 5), // Zajištění rozpětí 1-5
-      text: reviewText ? `<p>${reviewText}</p>` : '<p>Bez komentáře</p>',
+      text: reviewText ? `<p>${reviewText}</p>` : '',
       date: new Date(review.time * 1000).toISOString(),
       source: 'Google',
       avatar: review.profile_photo_url || '',
