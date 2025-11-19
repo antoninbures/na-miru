@@ -3,7 +3,7 @@ name: Sync Google Reviews to Webflow CMS
 on:
   schedule:
     - cron: '0 3 * * *'  # Spouští každý den ve 3:00 ráno UTC
-  workflow_dispatch:       # Umožní spustit ručně
+  workflow_dispatch:       # Umožní ruční spuštění
 
 jobs:
   sync:
@@ -32,12 +32,3 @@ jobs:
           GOOGLE_API_KEY_REVIEWS: ${{ secrets.GOOGLE_API_KEY_REVIEWS }}
           WEBFLOW_API_TOKEN: ${{ secrets.WEBFLOW_API_TOKEN }}
           WEBFLOW_COLLECTION_ID: ${{ secrets.WEBFLOW_COLLECTION_ID }}
-
-      - name: Commit cache updates
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add review-cache.json
-          git diff --staged --quiet || git commit -m "Update review cache [skip ci]"
-          git push
-        continue-on-error: true
